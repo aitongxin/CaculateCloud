@@ -66,8 +66,8 @@
             :rules="formRules"
             class="merchant-form"
           >
-            <el-form-item label="称呼" prop="name">
-              <el-input v-model="merchantForm.name" placeholder="请输入您的姓名" />
+            <el-form-item label="称呼" prop="customerName">
+              <el-input v-model="merchantForm.customerName" placeholder="请输入您的姓名" />
             </el-form-item>
             
             <el-form-item v-if="activeTab === 'enterprise'" label="企业名称" prop="companyName">
@@ -78,9 +78,9 @@
               <el-input v-model="merchantForm.contact" placeholder="请输入手机号码或邮箱" />
             </el-form-item>
             
-            <el-form-item label="设备描述" prop="description">
+            <el-form-item label="设备描述" prop="deviceDescription">
               <el-input 
-                v-model="merchantForm.description" 
+                v-model="merchantForm.deviceDescription" 
                 type="textarea" 
                 rows="5" 
                 placeholder="请描述您的设备型号、数量、规格等信息"
@@ -149,19 +149,28 @@ const merchantForm = reactive({
   description: '',
   type: 'personal'
 });
-
-// 表单验证规则
+  
+// 表单验证规则（字段名与 merchantForm 一致）
 const formRules = {
-  name: [
+  customerName: [ // ✅ 原 name 改为 customerName
     { required: true, message: '请输入称呼', trigger: 'blur' }
   ],
   companyName: [
-    { required: true, message: '请输入企业名称', trigger: 'blur' }
+    {
+      required: (rule, value, callback) => {
+        if (activeTab.value === 'enterprise' && !value) {
+          callback(new Error('请输入企业名称'));
+        } else {
+          callback();
+        }
+      },
+      trigger: 'blur'
+    }
   ],
   contact: [
     { required: true, message: '请输入联系方式', trigger: 'blur' }
   ],
-  description: [
+  deviceDescription: [ // ✅ 原 description 改为 deviceDescription
     { required: true, message: '请输入设备描述', trigger: 'blur' }
   ]
 };
@@ -173,42 +182,51 @@ const updateFormType = () => {
 
 // 提交表单
 const submitForm = async () => {
-  if (!merchantFormRef.value) return;
-  
-  // 更新表单类型
-  updateFormType();
-  
-  await merchantFormRef.value.validate(async (valid) => {
-    if (valid) {
-      // 检查是否登录
-      const token = localStorage.getItem('token');
-      if (!token) {
-        ElMessage.warning('请先登录再提交申请');
-        router.push('/login');
-        return;
-      }
-      
-      try {
-        // 在实际项目中，这里应该调用真实的API
-        // await axios.post('http://localhost:5000/api/merchant', {
-        //   name: merchantForm.name,
-        //   companyName: merchantForm.companyName,
-        //   contact: merchantForm.contact,
-        //   description: merchantForm.description,
-        //   type: activeTab.value
-        // }, {
-        //   headers: { Authorization: `Bearer ${token}` }
-        // });
-        
-        ElMessage.success('申请提交成功，我们会尽快与您联系');
-        // 重置表单
-        merchantFormRef.value.resetFields();
-      } catch (error) {
-        console.error('提交申请失败:', error);
-        ElMessage.error('提交申请失败，请稍后再试');
-      }
+    const isLoading = ref(false);
+    const merchantFormRefValue = merchantFormRef.value;
+
+    if (!merchantFormRefValue) return;
+
+    try {
+        isLoading.value = true;
+        const isValid = await merchantFormRefValue.validate();
+        if (!isValid) return;
+
+        // 构建请求数据
+        const formData = {
+            customerName: merchantForm.customerName.trim(),
+            companyName: merchantForm.companyName.trim(),
+            contact: merchantForm.contact.trim(),
+            deviceDescription: merchantForm.deviceDescription.trim(),
+            applyType: activeTab.value
+        };
+
+        // 发起网络请求，不携带 Authorization 头部
+        const response = await axios.post(
+            'http://localhost:5000/api/customers',
+            formData,
+            {
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                timeout: 10000
+            }
+        );
+
+        if (response.status === 201) {
+            ElMessage.success('提交成功');
+            merchantFormRefValue.resetFields();
+            activeTab.value = 'personal';
+        }
+    } catch (error) {
+        if (error.response) {
+            ElMessage.error(error.response.data.message || '请求失败');
+        } else {
+            ElMessage.error('网络连接失败，请检查网络设置');
+        }
+    } finally {
+        isLoading.value = false;
     }
-  });
 };
 </script>
 

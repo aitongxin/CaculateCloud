@@ -16,7 +16,7 @@
           <span>{{ item.label }}</span>
         </div>
       </div>
-      
+
       <!-- 内容区域 -->
       <div class="admin-content">
         <!-- Banner管理 -->
@@ -24,10 +24,10 @@
           <div class="section-header">
             <h2>Banner管理</h2>
             <el-button type="primary" @click="showAddBanner">
-              <el-icon><plus /></el-icon> 添加Banner
+              <el-icon><Plus /></el-icon> 添加Banner
             </el-button>
           </div>
-          
+
           <el-table :data="banners" style="width: 100%">
             <el-table-column prop="title" label="标题" />
             <el-table-column prop="type" label="类型">
@@ -61,16 +61,16 @@
             </el-table-column>
           </el-table>
         </div>
-        
+
         <!-- 算力资源管理 -->
         <div v-if="activeMenu === 'computing'" class="content-section">
           <div class="section-header">
             <h2>算力资源管理</h2>
             <el-button type="primary" @click="showComputingForm = true">
-              <el-icon><plus /></el-icon> 添加算力资源
+              <el-icon><Plus /></el-icon> 添加算力资源
             </el-button>
           </div>
-          
+
           <el-table :data="computingResources" style="width: 100%">
             <el-table-column prop="model" label="型号" />
             <el-table-column prop="type" label="类型" />
@@ -92,13 +92,13 @@
             </el-table-column>
           </el-table>
         </div>
-        
+
         <!-- 商家管理 -->
         <div v-if="activeMenu === 'merchant'" class="content-section">
           <div class="section-header">
             <h2>商家管理</h2>
           </div>
-          
+
           <el-table :data="merchants" style="width: 100%">
             <el-table-column prop="name" label="名称" />
             <el-table-column prop="contact" label="联系方式" />
@@ -117,13 +117,13 @@
             </el-table-column>
           </el-table>
         </div>
-        
+
         <!-- 用户管理 -->
         <div v-if="activeMenu === 'user'" class="content-section">
           <div class="section-header">
             <h2>用户管理</h2>
           </div>
-          
+
           <el-table :data="users" style="width: 100%">
             <el-table-column prop="username" label="用户名" />
             <el-table-column prop="role" label="角色">
@@ -142,16 +142,16 @@
             </el-table-column>
           </el-table>
         </div>
-        
+
         <!-- 常见问题管理 -->
         <div v-if="activeMenu === 'faq'" class="content-section">
           <div class="section-header">
             <h2>常见问题管理</h2>
             <el-button type="primary" @click="showAddFAQ">
-              <el-icon><plus /></el-icon> 添加问题
+              <el-icon><Plus /></el-icon> 添加问题
             </el-button>
           </div>
-          
+
           <el-table :data="faqs" style="width: 100%">
             <el-table-column prop="question" label="问题" />
             <el-table-column prop="answer" label="回答" :show-overflow-tooltip="true" />
@@ -169,9 +169,22 @@
             </el-table-column>
           </el-table>
         </div>
+
+     <!-- 客户信息管理 -->
+     <div v-if="activeMenu === 'customer'" class="content-section">
+          <div class="section-header">
+            <h2>客户信息管理</h2>
+          </div>
+          <!-- 客户信息表格（关键修改：4列，算力描述） -->
+          <el-table :data="customers" style="width: 100%">
+            <el-table-column prop="customerName" label="客户姓名" />
+            <el-table-column prop="companyName" label="企业名称" />
+            <el-table-column prop="contact" label="联系方式" />
+            <el-table-column prop="deviceDescription" label="算力描述" />
+          </el-table>
+        </div>
       </div>
     </div>
-    
     <!-- Banner表单对话框 -->
     <el-dialog v-model="showBannerForm" title="Banner管理" width="600px">
       <el-form :model="bannerForm" ref="bannerFormRef" label-width="80px" :rules="bannerRules">
@@ -200,7 +213,7 @@
             :before-upload="beforeBannerUpload"
           >
             <img v-if="bannerForm.imageUrl" :src="bannerForm.imageUrl" class="banner-image" />
-            <el-icon v-else class="banner-uploader-icon"><plus /></el-icon>
+            <el-icon v-else class="banner-uploader-icon"><Plus /></el-icon>
           </el-upload>
           <div class="banner-upload-tip">
             推荐尺寸: 1920×500像素，格式: JPG/PNG，大小不超过5MB
@@ -221,7 +234,7 @@
         </span>
       </template>
     </el-dialog>
-    
+
     <!-- 算力资源表单对话框 -->
     <el-dialog v-model="showComputingForm" title="算力资源管理" width="600px">
       <el-form :model="computingForm" ref="computingFormRef" label-width="80px" :rules="computingRules">
@@ -259,7 +272,7 @@
         </span>
       </template>
     </el-dialog>
-    
+
     <!-- FAQ表单对话框 -->
     <el-dialog v-model="showFAQForm" title="常见问题管理" width="600px">
       <el-form :model="faqForm" ref="faqFormRef" label-width="80px" :rules="faqRules">
@@ -301,10 +314,29 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import axios from 'axios';
 import { mockUsers } from '../utils/mockDb';
 import { banners as bannersData, computingResources as computingResourcesData, merchants as merchantsData, faqs as faqsData } from '../utils/commonData';
-
 // 获取用户信息和检查权限
 const router = useRouter();
 const userRole = ref('');
+
+const customers = ref([]); // 客户数据
+
+// 获取客户数据
+const fetchCustomers = async () => {
+    try {
+        const response = await axios.get('/api/customers');
+        const data = response.data;
+        if (Array.isArray(data)) {
+            customers.value = data;
+        } else {
+            console.error('接口返回的数据不是数组类型:', data);
+            ElMessage.error('获取客户数据格式错误，请稍后再试');
+        }
+    } catch (error) {
+        console.error('获取客户数据失败:', error);
+        ElMessage.error('获取客户数据失败，请稍后再试');
+    }
+};
+
 
 onMounted(() => {
   // 检查用户是否为管理员
@@ -313,7 +345,7 @@ onMounted(() => {
     try {
       const user = JSON.parse(userStr);
       userRole.value = user.role;
-      
+
       // 如果不是管理员，重定向到首页
       if (user.role !== 'admin') {
         ElMessage.error('您没有权限访问管理系统');
@@ -327,16 +359,20 @@ onMounted(() => {
     ElMessage.error('请先登录');
     router.push('/login');
   }
+
+  // 获取客户数据
+  fetchCustomers();
 });
 
 // 菜单状态
 const activeMenu = ref('banner');
 const menuItems = [
-  { key: 'banner', label: 'Banner管理', icon: 'Picture' },
-  { key: 'computing', label: '算力资源管理', icon: 'DataLine' },
-  { key: 'merchant', label: '商家管理', icon: 'ShoppingCart' },
-  { key: 'user', label: '用户管理', icon: 'User' },
-  { key: 'faq', label: '常见问题管理', icon: 'QuestionFilled' },
+  { key: 'banner', label: 'Banner管理', icon: Picture },
+  { key: 'computing', label: '算力资源管理', icon: DataLine },
+  { key: 'merchant', label: '商家管理', icon: ShoppingCart },
+  { key: 'user', label: '用户管理', icon: User },
+  { key: 'faq', label: '常见问题管理', icon: QuestionFilled },
+  { key: 'customer', label: '客户信息', icon: User }
 ];
 
 // 表单显示控制
@@ -493,7 +529,7 @@ const beforeBannerUpload = (file) => {
 // 处理Banner图片上传
 const handleBannerUpload = (options) => {
   const { file } = options;
-  
+
   // 在实际项目中，应该将文件上传到服务器
   // 这里简化为直接将文件转换为base64
   const reader = new FileReader();
@@ -505,11 +541,11 @@ const handleBannerUpload = (options) => {
 
 const saveBanner = async () => {
   if (!bannerFormRef.value) return;
-  
+
   await bannerFormRef.value.validate(async (valid) => {
     if (valid) {
       submitting.value = true;
-      
+
       try {
         // 模拟保存逻辑
         setTimeout(() => {
@@ -526,7 +562,7 @@ const saveBanner = async () => {
             banners.value.push(newBanner);
             ElMessage.success('Banner添加成功');
           }
-          
+
           showBannerForm.value = false;
           submitting.value = false;
         }, 1000);
@@ -562,11 +598,11 @@ const editComputing = (resource) => {
 
 const saveComputing = async () => {
   if (!computingFormRef.value) return;
-  
+
   await computingFormRef.value.validate(async (valid) => {
     if (valid) {
       submitting.value = true;
-      
+
       try {
         // 模拟保存逻辑
         setTimeout(() => {
@@ -583,7 +619,7 @@ const saveComputing = async () => {
             computingResources.value.push(newResource);
             ElMessage.success('算力资源添加成功');
           }
-          
+
           showComputingForm.value = false;
           submitting.value = false;
         }, 1000);
@@ -647,7 +683,7 @@ const deleteUser = (user) => {
     ElMessage.error('不能删除管理员用户');
     return;
   }
-  
+
   ElMessageBox.confirm('确定要删除这个用户吗?', '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
@@ -676,11 +712,11 @@ const editFAQ = (faq) => {
 
 const saveFAQ = async () => {
   if (!faqFormRef.value) return;
-  
+
   await faqFormRef.value.validate(async (valid) => {
     if (valid) {
       submitting.value = true;
-      
+
       try {
         // 模拟保存逻辑
         setTimeout(() => {
@@ -697,7 +733,7 @@ const saveFAQ = async () => {
             faqs.value.push(newFAQ);
             ElMessage.success('常见问题添加成功');
           }
-          
+
           showFAQForm.value = false;
           submitting.value = false;
         }, 1000);
@@ -724,6 +760,7 @@ const deleteFAQ = (faq) => {
 const updateFAQStatus = (faq) => {
   ElMessage.success(`常见问题 "${faq.question}" ${faq.active ? '已启用' : '已禁用'}`);
 };
+
 </script>
 
 <style scoped>
@@ -859,11 +896,15 @@ const updateFAQStatus = (faq) => {
   .admin-container {
     flex-direction: column;
   }
-  
+
   .admin-menu {
     width: 100%;
     margin-right: 0;
     margin-bottom: 20px;
   }
+
+  .admin-content {
+    width: 100%;
+  }
 }
-</style> 
+</style>    
